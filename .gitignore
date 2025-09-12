@@ -4,3 +4,4 @@ HWDR_experiments.ipynb
 Dockerfile
 #Ignore datasets
 data/
+artifacts/

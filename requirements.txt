@@ -2,3 +2,5 @@ mlflow
 numpy
 pandas
 copy
+matplotlib
+dagshub

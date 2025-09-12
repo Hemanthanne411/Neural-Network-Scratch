@@ -16,16 +16,16 @@ class NeuralNetwork:
         self.iterations = iterations
         self.learning_rate = learning_rate
         self.print_cost = print_cost
-
+        self.parameters = None
 
     def _parameter_initialize(self, L):
         parameters = {}
-
         for i in range(len(L) - 1):
-            parameters["W" + str(i+1)] = np.random.randn(L[i+1], L[i]) * 0.05
+            # FIX 1: Better weight initialization (He initialization for ReLU)
+            parameters["W" + str(i+1)] = np.random.randn(L[i+1], L[i]) * np.sqrt(2 / L[i])
             parameters["b" + str(i+1)] = np.zeros((L[i+1], 1))
-
         return parameters
+
 
     def _forward_linear(self, A, W, b):
 
@@ -83,32 +83,27 @@ class NeuralNetwork:
         #             ((A, W, b), Z) ---> layer 2
         #            .
         #            .
-        #            .
         #            ((A, W, b), Z) ---> layer L
         #            ]
         
         return AL, caches
-
     def _compute_cost(self, AL, Y):
         """
-        Computes Cost using Categorical Cross Entropy Loss Function
-        Cost = (-1/m) * Sum for all examples -[Y*log(A)]
-        
+        Computes Cost using appropriate loss function
         """
         m = Y.shape[1]
-
-        logar = np.multiply(Y, np.log(AL))
         
-        cost = (np.sum(logar))/(-m)
-        print(f"AL (example 3): {AL[:, 2]}")
-        print(f"Y (example 3): {Y[:, 2]}")
-        print(f"Sum of softmax probabilities for example 3: {np.sum(AL[:, 2])}")
-        # cost = np.squeeze(cost) # to return just correct cost shape (float)
-
-        # if iterations % 100 ==0 and print_cost == True:
-        #     print(f"Iteration: {iterations}./n Cost : {cost}") 
-
+        if self.activations[1] == 'softmax':  # Categorical
+            logar = np.multiply(Y, np.log(AL + 1e-12))
+            cost = -np.sum(logar) / m
+            
+        elif self.activations[1] == 'sigmoid':  # Binary
+            # Improved clipping and used np.mean instead of manual division
+            AL = np.clip(AL, 1e-15, 1 - 1e-15)
+            cost = -np.mean(Y * np.log(AL) + (1 - Y) * np.log(1 - AL))
+                    
         return cost
+   
     
     def _activation_derivatives(self, activation, cache):
 
@@ -171,31 +166,14 @@ class NeuralNetwork:
         gradients = {}
         L = len(caches)
         Y = Y.reshape(AL.shape)
-        if activations[1] == "softmax":
-            dAL = AL - Y  
-            dZ = dAL                                           # for softmax + categorical crossentropy
-        elif activations[1] == "sigmoid":
-            dAL = - (np.divide(Y, AL) - np.divide(1 - Y, 1 - AL))    # for sigmoid + binary crossentropy
-        else:
-            raise ValueError(f"Unsupported output activation: {activations[1]}")
+        
+        # Output layer gradient
+        dAL = - (np.divide(Y, AL) - np.divide(1 - Y, 1 - AL))
+        # Index 0, 1, 2, 3... L so last layer is L-1                    
 
-        # # Derivative for the final output layer activation with CATEGORICAL CROSS ENTROPY LOSS
-        # epsilon = 1e-12
-        # AL = np.clip(AL, epsilon, 1. -epsilon)
-        # dAL = -(np.divide(Y, AL))                        # Some formula depending on the Cost Function.
-
-        # Index 0, 1, 2, 3... L so last layer is L-1                          
         last_cache = caches[L-1]
-        # Output layer( L'th layer) gradients take dAL, cache containing (A_prev, W, b), activation of the ouput.
-        # This is a single seperate computation because of unique dAL.
-        linear_cache,activation_cache = last_cache
-        # dA_prev_temp, dW_temp, db_temp = _activation_backpropagation(dAL, last_cache, activation = activations[1])
-        dA_prev_temp, dW_temp, db_temp = self._linear_backpropagation(dZ, linear_cache)
-
-        gradients["dA" + str(L-1)] = dA_prev_temp
-        gradients["dW" + str(L)] = dW_temp
-        gradients["db" + str(L)] = db_temp
-
+        gradients["dA" + str(L-1)], gradients["dW" + str(L)], gradients["db" + str(L)] = self._activation_backpropagation(dAL, last_cache, activations[1])
+        
 
         # Now we have the dA_prev from the last layer and this can be used to compute all the gradients from (L-1)layer
         # in a single for loop because of the same activation.
@@ -211,11 +189,9 @@ class NeuralNetwork:
         # gradients = {
         #     "dW2": dW2,
         #     "db2": db2,
-        #     "dW1": dW1,
-        #     "db1": db1,
         # }
         return gradients
-    
+
 
     def _gradient_descent(self, parameters, grads, learning_rate = 0.02):
         """ This function applies gradient descent, updates the weight and bias parameters using their respective gradients.
@@ -258,17 +234,18 @@ class NeuralNetwork:
             # Parameter update
             parameters = self._gradient_descent(parameters, grads, self.learning_rate)
             
-
+        self.parameters=parameters
         return parameters
     
     def predict_y(self, X: np.ndarray, parameters: dict[str, np.ndarray], activations) -> np.ndarray:
-
-        AL,caches = self._forward_propagation(parameters, X, activations= activations)
-        y_pred = np.argmax(AL, axis = 0)
-        return y_pred
+        if activations[1] == "sigmoid":
+            AL, _ = self._forward_propagation(parameters, X, activations)
+            predictions = (AL > 0.5).astype(int)
+            return predictions
+        else:
+            AL,caches = self._forward_propagation(parameters, X, activations= activations)
+            y_pred = np.argmax(AL, axis = 0)
+            return y_pred
     
     def accuracy(self, true_y, predicted_y):
         return np.mean(true_y == predicted_y)
-        # print("ACCURACY :", accuracy)
-        # print(f"Your Neural Networks Prediction is {predicted_y}")
-        # print(f"The actual Label of the given input is {true_y}")

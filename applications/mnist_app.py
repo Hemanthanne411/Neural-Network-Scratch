@@ -5,6 +5,12 @@ import mlflow
 import mlflow.sklearn
 import matplotlib.pyplot as plt
 import seaborn as sns
+import dagshub
+import os
+import joblib
+
+dagshub.init(repo_owner='Hemanthanne411', repo_name='Neural-Network-Scratch', mlflow=True)
+mlflow.set_tracking_uri("https://dagshub.com/Hemanthanne411/Neural-Network-Scratch.mlflow")
 
 
 def encode_y(Y):
@@ -15,6 +21,10 @@ def encode_y(Y):
 
 
 def main():
+
+    artifacts_dir = "artifacts/mnist"
+    os.makedirs(artifacts_dir, exist_ok=True)
+
     df_train = pd.read_csv('./data/raw/mnist/mnist_train.csv')
     df_test = pd.read_csv('./data/raw/mnist/mnist_test.csv')
     train_data = np.array(df_train)
@@ -22,6 +32,8 @@ def main():
 
     n_h = [32,16,10]
     activations = ['relu', 'softmax']
+    iterations = 800
+    learning_rate = 0.1
     # m training examples and n features
     train_data.shape
     m, n = train_data.shape
@@ -33,20 +45,32 @@ def main():
     X_test = (test_data[:, 1:].T)/255
     y_test = test_data[:, 0]
 
- 
+
     y_train_enc = encode_y(y_train)
+    mlflow.set_experiment("NN_Experiment-1-MNIST")
+    with mlflow.start_run():
+        mlflow.log_param("Hidden_layers", n_h)
+        mlflow.log_param("Activations", activations)
 
-    jod = NeuralNetwork(n_h, activations, iterations = 800, learning_rate = 0.1, print_cost = True)
-    params = jod.train_NN(X_train, y_train_enc)
+        jod = NeuralNetwork(n_h, activations, iterations = iterations, learning_rate = learning_rate, print_cost = True)
+        params = jod.train_NN(X_train, y_train_enc)
+        mlflow.log_param("Iterations", iterations)
+        mlflow.log_param("Learning_rate", learning_rate)
 
-    train_predictions = jod.predict_y(X_train, params, activations=activations)
-    train_accuracy = jod.accuracy(y_train, train_predictions)
-    print(f"The accuracy of the NN in Training : {train_accuracy:.4f}\n")
+        train_predictions = jod.predict_y(X_train, params, activations=activations)
+        train_accuracy = jod.accuracy(y_train, train_predictions)
+        # print(f"The accuracy of the NN in Training : {train_accuracy:.4f}\n")
 
-    
-    test_predictions = jod.predict_y(X_test, params, activations=activations)
-    test_accuracy = jod.accuracy(y_test, test_predictions)
-    print(f"The accuracy of the NN in Test : {test_accuracy:.4f}")
+        
+        test_predictions = jod.predict_y(X_test, params, activations=activations)
+        test_accuracy = jod.accuracy(y_test, test_predictions)
+        # print(f"The accuracy of the NN in Test : {test_accuracy:.4f}")
+        mlflow.log_metric("Train Accuracy", train_accuracy)
+        mlflow.log_metric("Test Accuracy", test_accuracy)
+
+        model_path = os.path.join(artifacts_dir, "mnist_model.pkl")
+        joblib.dump(jod, model_path)
+        mlflow.log_artifact(model_path)
     
 
 if __name__ == '__main__':
