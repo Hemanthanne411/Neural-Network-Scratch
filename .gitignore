@@ -1,0 +1,6 @@
+testing.ipynb
+CATORNOT.ipynb
+HWDR_experiments.ipynb
+Dockerfile
+#Ignore datasets
+data/
