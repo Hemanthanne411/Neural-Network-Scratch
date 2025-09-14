@@ -1,0 +1,4 @@
+[core]
+    remote = myremote
+['remote "myremote"']
+    url = https://dagshub.com/Hemanthanne411/Neural-Network-Scratch.dvc

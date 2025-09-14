@@ -46,6 +46,9 @@ class NeuralNetwork:
             exp_Z = np.exp(Z_shifted)
             A = exp_Z / np.sum(exp_Z, axis=0, keepdims=True)
             return A, Z
+        elif act_fn == 'tanh':
+            A = np.tanh(Z)
+            return A, Z
         # ADD MORE ACTIVATION FUNCTIONS
 
     def _forward_activation(self, A_prev, W, b, activation):

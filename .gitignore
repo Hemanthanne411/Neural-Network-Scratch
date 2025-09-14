@@ -5,3 +5,5 @@ Dockerfile
 #Ignore datasets
 data/
 artifacts/
+/data
+/artifacts
