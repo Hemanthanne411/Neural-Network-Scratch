@@ -1,0 +1,5 @@
+outs:
+    - md5: 248684383b6aead49d784d2314e21077.dir
+      size: 3188980
+      path: cats-data
+      nfiles: 2
