@@ -5,3 +5,4 @@ Dockerfile
 #Ignore datasets
 data/
 artifacts/
+cats-data
