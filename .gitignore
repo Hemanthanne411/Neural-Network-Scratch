@@ -6,3 +6,5 @@ Dockerfile
 data/
 artifacts/
 cats-data
+
+mnist-data
